@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nathan Netflix | Giveaway</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root { --bg-dark: #0a0a0a; --bg-card: rgba(20, 20, 20, 0.95); --text-white: #ffffff; --text-muted: #a0a0a0; --accent-green: #55efc4; --accent-dark-green: #00b894; --font-main: 'Inter', sans-serif; }
+        body { font-family: var(--font-main); background: var(--bg-dark); color: var(--text-white); height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; background: radial-gradient(circle at center, #111915 0%, var(--bg-dark) 80%); }
+        nav { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(10px); z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-weight: 800; letter-spacing: 1px; font-size: 1.1rem; text-transform: uppercase; color: white; text-decoration: none; }
+        .nav-links a { color: #aaa; text-decoration: none; margin-left: 20px; }
+        .nav-links a:hover { color: var(--accent-green); }
+        .giveaway-section { flex: 1; display: flex; justify-content: center; align-items: center; padding: 120px 20px 50px 20px; }
+        .modal-card { background: var(--bg-card); border: 1px solid var(--accent-green); border-radius: 20px; padding: 3rem; max-width: 650px; width: 100%; text-align: center; box-shadow: 0 0 50px rgba(85, 239, 196, 0.15); position: relative; }
+        #wait-mode { display: block; }
+        #live-mode { display: none; }
+        #winner-mode { display: none; text-align: left; }
+        .warning-icon { font-size: 3rem; margin-bottom: 1rem; display: block; animation: bounce 2s infinite; }
+        .warning-text { font-size: 1.5rem; font-weight: 700; color: var(--accent-green); margin-bottom: 1rem; line-height: 1.4; }
+        .live-counter { background: rgba(85, 239, 196, 0.1); border: 1px solid var(--accent-green); color: var(--accent-green); padding: 10px 20px; border-radius: 50px; font-weight: bold; font-size: 1.2rem; display: inline-block; margin-bottom: 20px; }
+        .check-btn { display: inline-block; width: 100%; max-width: 300px; padding: 18px; background: linear-gradient(90deg, var(--accent-green), var(--accent-dark-green)); color: #0a0a0a; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 10px 20px rgba(85, 239, 196, 0.3); transition: all 0.3s ease; margin-bottom: 2rem; }
+        .check-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 30px rgba(85, 239, 196, 0.5); }
+        .check-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; transform: none; }
+        .prize-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
+        .prize-label { color: var(--accent-green); font-weight: bold; }
+        .prize-val { font-family: monospace; font-size: 1.1rem; color: #fff; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html" class="logo">NATHAN NETFLIX</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-item">Home</a>
+            <a href="page2.html" class="nav-item">Netflix</a>
+            <a href="reviews.html" class="nav-item">Reviews</a>
+            <a href="buy.html" class="nav-item">Buy</a>
+            <a href="about.html" class="nav-item">About</a>
+        </div>
+    </nav>
+
+    <div class="giveaway-section">
+        <div class="modal-card">
+            
+            <div id="wait-mode">
+                <div class="warning-icon">⏳</div>
+                <h2 class="warning-text">Giveaway Not Started</h2>
+                <p style="color:#aaa; margin-bottom:30px;">Please wait for the announcement on Telegram.</p>
+                <div class="live-counter" id="wait-display">...</div>
+            </div>
+
+            <div id="live-mode">
+                <div class="warning-icon">🔥</div>
+                <div class="live-counter" id="counterDisplay">Loading...</div>
+                <h2 class="warning-text">GIVEAWAY IS LIVE!</h2>
+                <p style="color:#aaa; margin-bottom:20px;">Hurry! Accounts are limited.</p>
+                <button class="check-btn" id="claimBtn" onclick="claimAccount()">CLAIM ACCOUNT NOW</button>
+            </div>
+
+            <div id="winner-mode">
+                <h2 style="text-align:center; color:var(--accent-green); margin-bottom:20px;">🎉 ACCOUNT CLAIMED!</h2>
+                <div class="prize-row"><span class="prize-label">Email:</span><span class="prize-val" id="winEmail">...</span></div>
+                <div class="prize-row"><span class="prize-label">Password:</span><span class="prize-val" id="winPass">...</span></div>
+                <div class="prize-row"><span class="prize-label">Country:</span><span class="prize-val" id="winCountry">...</span></div>
+                <div style="margin-top:20px; font-size:0.9rem; color:#ff4757; text-align:center;">⚠ Screenshot this now! It will disappear if you refresh.</div>
+                <a href="index.html" class="check-btn" style="text-align:center; display:block; margin-top:20px; text-decoration:none;">Go Home</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+             // PASTE THE KEYS FROM ADMIN.HTML HERE
+        };
+        // ---------------------------------------
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Listen for live updates
+        db.collection("settings").doc("giveaway").onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                const count = data.claimed || 0;
+                const limit = data.limit || 30;
+
+                // Update text
+                const text = `${count} / ${limit} Claimed`;
+                document.getElementById('counterDisplay').innerText = text;
+                document.getElementById('wait-display').innerText = text;
+
+                if (data.active) {
+                    document.getElementById('wait-mode').style.display = 'none';
+                    document.getElementById('live-mode').style.display = 'block';
+
+                    const btn = document.getElementById('claimBtn');
+                    if (count >= limit) {
+                        btn.disabled = true;
+                        btn.innerText = "SOLD OUT / ENDED";
+                        btn.style.background = "#555";
+                    } else {
+                        btn.disabled = false;
+                        btn.innerText = "CLAIM ACCOUNT NOW";
+                    }
+                } else {
+                    document.getElementById('wait-mode').style.display = 'block';
+                    document.getElementById('live-mode').style.display = 'none';
+                }
+            }
+        });
+
+        function claimAccount() {
+            const isAdmin = localStorage.getItem('nathanIsAdmin') === 'true';
+            if (!isAdmin && localStorage.getItem('nathanHasRedeemed') === 'true') {
+                window.location.href = "limit_reached.html";
+                return;
+            }
+
+            // Find an unused code in the cloud
+            db.collection("codes").where("active", "==", true).limit(1).get().then((querySnapshot) => {
+                if (querySnapshot.empty) {
+                    return alert("Sorry! All accounts claimed or stock empty.");
+                }
+
+                const doc = querySnapshot.docs[0];
+                const account = doc.data();
+
+                // Delete from cloud (Claim it)
+                doc.ref.delete();
+
+                // Update Counter in Cloud
+                const settingsRef = db.collection("settings").doc("giveaway");
+                settingsRef.update({
+                    claimed: firebase.firestore.FieldValue.increment(1)
+                });
+
+                if (!isAdmin) {
+                    localStorage.setItem('nathanHasRedeemed', 'true');
+                }
+
+                document.getElementById('live-mode').style.display = 'none';
+                document.getElementById('winner-mode').style.display = 'block';
+                document.getElementById('winEmail').innerText = account.email;
+                document.getElementById('winPass').innerText = account.pass;
+                document.getElementById('winCountry').innerText = account.country;
+            }).catch((error) => {
+                console.error("Error:", error);
+                alert("Too many people clicking! Try again.");
+            });
+        }
+    </script>
+</body>
+</html>

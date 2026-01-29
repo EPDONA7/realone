@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nathan Netflix | Cloud Admin</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        :root { --bg-dark: #0a0a0a; --bg-card: #141414; --accent-green: #55efc4; --text-white: #fff; --font-main: 'Inter', sans-serif; }
+        body { font-family: var(--font-main); background: var(--bg-dark); color: var(--text-white); padding: 2rem; }
+        .admin-container { max-width: 1000px; margin: 0 auto; display: grid; gap: 2rem; }
+        
+        #login-overlay { position: fixed; inset: 0; background: #000; z-index: 999; display: flex; justify-content: center; align-items: center; }
+        .login-input { padding: 10px; border-radius: 5px; border: 1px solid var(--accent-green); background: #222; color: #fff; margin-bottom: 10px; }
+        
+        .section-card { background: var(--bg-card); border: 1px solid #333; padding: 2rem; border-radius: 15px; }
+        h2 { color: var(--accent-green); margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+        
+        textarea.bulk-input { width: 100%; height: 200px; background: #222; border: 1px solid #444; color: #eee; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.75rem; margin-bottom: 1rem; white-space: pre; overflow: auto; }
+
+        button { padding: 12px 25px; background: var(--accent-green); border: none; font-weight: bold; cursor: pointer; border-radius: 5px; font-size: 1rem; }
+        button:hover { opacity: 0.9; }
+        .btn-delete { background: #ff4757; color: white; padding: 5px 10px; font-size: 0.8rem; margin-left: 10px; }
+        .btn-stop { background: #ff4757; color: white; }
+
+        .item-list { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; max-height: 500px; overflow-y: auto; }
+        .list-row { background: #1a1a1a; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; border-left: 3px solid var(--accent-green); }
+        .code-display { font-family: monospace; font-size: 1.1rem; color: var(--accent-green); letter-spacing: 1px; }
+        
+        #statusMsg { font-weight: bold; margin-top: 10px; padding: 10px; border-radius: 5px; display: none; }
+        .success { background: rgba(85, 239, 196, 0.1); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .error { background: rgba(255, 71, 87, 0.1); color: #ff4757; border: 1px solid #ff4757; }
+
+        .control-row { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; background: #222; padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div style="text-align:center;">
+            <h2 style="border:none;">ADMIN LOCKED 🔒</h2>
+            <input type="password" id="adminPass" class="login-input" placeholder="Enter Password"> <br>
+            <button onclick="checkAdmin()">UNLOCK</button>
+        </div>
+    </div>
+
+    <div class="admin-container">
+        <h1>Cloud Admin Dashboard ☁️</h1>
+
+        <div class="section-card" style="border-color: var(--accent-green);">
+            <h2>🔥 Open Giveaway Control</h2>
+            <div class="control-row">
+                <div><label>Status:</label><br><span id="gaStatus" style="font-weight:bold; color:#ff4757;">LOADING...</span></div>
+                <div><label>Limit:</label><br><input type="number" id="gaLimit" style="width: 80px;" value="30"></div>
+                <div><label>Claims:</label><br><span id="gaClaimed" style="color:var(--accent-green);">0</span></div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="startGiveaway()">✅ START</button>
+                <button onclick="stopGiveaway()" class="btn-stop">wm STOP</button>
+                <button onclick="resetCounter()" style="background:#444; color:#fff;">↺ RESET</button>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h2>1. Smart Bulk Code Generator</h2>
+            <textarea id="bulkData" class="bulk-input" placeholder="Paste your accounts here..."></textarea>
+            <button onclick="processBulk()">⚡ UPLOAD TO CLOUD</button>
+            <div id="statusMsg"></div>
+            <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
+                <h3>Cloud Codes Database (<span id="codeCount">0</span>)</h3>
+                <div id="codesList" class="item-list"></div>
+            </div>
+        </div>
+        
+        <div class="section-card">
+            <h2>2. Manage Reviews</h2>
+            <div id="reviewsList" class="item-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. PASTE YOUR FIREBASE CONFIG HERE ---
+        // REPLACE THE LINES BELOW WITH YOUR COPIED CODE FROM FIREBASE
+       const firebaseConfig = {
+            apiKey: "AIzaSyBigUq4ey@AKnP23ZSF60An7Mrbt zROnbU",
+            authDomain: "nathan-3b7db.firebaseapp.com",
+            projectId: "nathan-3b7db",
+            storageBucket: "nathan-3b7db.firebasestorage.app",
+            messagingSenderId: "945645228940",
+            appId: "1:945645228940:web:6decc5f01e8ca2e718bca9"
+        };
+        // ------------------------------------------
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const countryMap = { "US": "United States", "BR": "Brazil", "IN": "India", "GB": "UK", "CA": "Canada", "MX": "Mexico", "DE": "Germany", "FR": "France", "ES": "Spain", "IT": "Italy", "JP": "Japan", "KR": "Korea", "AU": "Australia", "TR": "Turkey", "PH": "Philippines", "ID": "Indonesia", "TH": "Thailand", "AR": "Argentina", "CO": "Colombia", "NG": "Nigeria", "ZA": "South Africa", "EG": "Egypt", "SA": "Saudi Arabia", "AE": "UAE", "PK": "Pakistan", "VN": "Vietnam", "RU": "Russia", "PT": "Portugal" };
+
+        function checkAdmin() {
+            if(document.getElementById('adminPass').value === "admin123") {
+                document.getElementById('login-overlay').style.display = 'none';
+                localStorage.setItem('nathanIsAdmin', 'true'); // Keep God Mode local
+                loadData();
+                loadGiveawayStats();
+            } else { alert("Wrong Password!"); }
+        }
+
+        // --- CLOUD GIVEAWAY LOGIC ---
+        function loadGiveawayStats() {
+            // Listen to live updates from cloud
+            db.collection("settings").doc("giveaway").onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('gaLimit').value = data.limit;
+                    document.getElementById('gaClaimed').innerText = data.claimed;
+                    const statusLabel = document.getElementById('gaStatus');
+                    if(data.active) {
+                        statusLabel.innerText = "ONLINE 🟢";
+                        statusLabel.style.color = "var(--accent-green)";
+                    } else {
+                        statusLabel.innerText = "OFFLINE 🔴";
+                        statusLabel.style.color = "#ff4757";
+                    }
+                }
+            });
+        }
+
+        function startGiveaway() {
+            const limit = parseInt(document.getElementById('gaLimit').value);
+            db.collection("settings").doc("giveaway").set({ active: true, limit: limit }, { merge: true });
+        }
+
+        function stopGiveaway() {
+            db.collection("settings").doc("giveaway").set({ active: false }, { merge: true });
+        }
+
+        function resetCounter() {
+            if(confirm("Reset counter to 0?")) {
+                db.collection("settings").doc("giveaway").set({ claimed: 0 }, { merge: true });
+            }
+        }
+
+        // --- CLOUD BULK GENERATOR ---
+        function processBulk() {
+            const rawText = document.getElementById('bulkData').value;
+            const statusBox = document.getElementById('statusMsg');
+            if(!rawText.trim()) return alert("Box is empty!");
+            
+            const lines = rawText.replace(/\r\n/g, "\n").split('\n');
+            let batch = db.batch(); // Use batch for faster uploads
+            let count = 0;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if(line.length < 10) return;
+                
+                const emailMatch = line.match(/([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+                if(emailMatch) {
+                    const email = emailMatch[1];
+                    const rest = line.substring(line.indexOf(email) + email.length);
+                    const passMatch = rest.match(/^\s*:\s*([^:\s|]+)/);
+                    const countryMatch = line.match(/(?:Country|UserCountry)\s*[:=]\s*([A-Za-z]{2})/i);
+
+                    if(passMatch) {
+                        const pass = passMatch[1].trim();
+                        let countryCode = "BR";
+                        if(countryMatch) countryCode = countryMatch[1].toUpperCase();
+                        const fullCountry = countryMap[countryCode] || countryCode;
+                        
+                        const newCode = generateId(10);
+                        const codeRef = db.collection("codes").doc(newCode);
+                        
+                        batch.set(codeRef, {
+                            email: email, pass: pass, country: fullCountry, active: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        count++;
+                    }
+                }
+            });
+
+            batch.commit().then(() => {
+                statusBox.style.display = 'block';
+                statusBox.className = 'success';
+                statusBox.innerText = `✅ Success! Uploaded ${count} codes to the cloud.`;
+                document.getElementById('bulkData').value = ''; 
+            }).catch((error) => {
+                console.error("Error writing document: ", error);
+                alert("Error uploading to Firebase: " + error.message);
+            });
+        }
+
+        function generateId(len) {
+            let res = ''; const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            for (let i=0; i<len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+        }
+
+        function deleteCode(id) {
+            db.collection("codes").doc(id).delete();
+        }
+
+        function deleteReview(id) {
+            db.collection("reviews").doc(id).delete();
+        }
+
+        function loadData() {
+            // Live listener for Codes
+            db.collection("codes").where("active", "==", true).onSnapshot((querySnapshot) => {
+                const list = document.getElementById('codesList');
+                document.getElementById('codeCount').innerText = querySnapshot.size;
+                list.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const val = doc.data();
+                    list.innerHTML += `<div class="list-row"><div style="overflow:hidden;"><span class="code-display">${doc.id}</span><br><small style="color:#aaa;">${val.email}</small><br><small style="color:var(--accent-green);">${val.country} | ${val.pass}</small></div><button class="btn-delete" onclick="deleteCode('${doc.id}')">X</button></div>`;
+                });
+            });
+
+            // Live listener for Reviews
+            db.collection("reviews").orderBy("date", "desc").limit(20).onSnapshot((querySnapshot) => {
+                const rlist = document.getElementById('reviewsList');
+                rlist.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const r = doc.data();
+                    rlist.innerHTML += `<div class="list-row"><div style="display:flex; align-items:center; gap:10px;"><img src="${r.image}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"><div><strong>${r.user}</strong></div></div><button class="btn-delete" onclick="deleteReview('${doc.id}')">X</button></div>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>

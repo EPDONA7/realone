@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nathan Netflix | Redeem</title>
+    <style>
+        :root { --bg-dark: #0a0a0a; --bg-card: rgba(20, 20, 20, 0.9); --accent-green: #55efc4; --font-main: 'Inter', sans-serif; }
+        body { font-family: var(--font-main); background: var(--bg-dark); color: #fff; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        .bg-overlay { position: fixed; inset: 0; background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.95)), url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg'); background-size: cover; z-index: -1; }
+
+        nav { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 1.5rem 5%; background: rgba(10,10,10,0.9); backdrop-filter: blur(10px); z-index: 1000; }
+        .logo { font-weight: 800; color: #fff; text-decoration: none; text-transform: uppercase; }
+        .nav-links a { color: #aaa; text-decoration: none; margin-left: 20px; }
+
+        .container { max-width: 900px; margin: 120px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+
+        .card-box { background: var(--bg-card); padding: 2rem; border-radius: 15px; border: 1px solid rgba(85, 239, 196, 0.1); backdrop-filter: blur(10px); }
+        
+        input, textarea { width: 100%; padding: 15px; margin-bottom: 1rem; background: rgba(255,255,255,0.05); border: 1px solid #333; color: #fff; border-radius: 8px; }
+        button { width: 100%; padding: 15px; background: var(--accent-green); border: none; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        button:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(85,239,196,0.3); }
+
+        #winner-box { display: none; text-align: center; border: 2px solid var(--accent-green); }
+        .prize-details { background: #000; padding: 15px; margin: 15px 0; border-radius: 8px; text-align: left; }
+        .prize-item { color: var(--accent-green); font-size: 0.9rem; margin-bottom: 5px; }
+        .prize-val { color: #fff; font-size: 1.1rem; font-family: monospace; user-select: all; }
+        
+        .visual { display: flex; justify-content: center; align-items: center; }
+        .torus-img { width: 100%; max-width: 400px; animation: float 6s infinite ease-in-out; }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
+
+        @media(max-width:800px) { .container{grid-template-columns: 1fr;} .visual{order:-1;} }
+    </style>
+</head>
+<body>
+
+    <div class="bg-overlay"></div>
+    <nav>
+        <a href="index.html" class="logo">NATHAN NETFLIX</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-item">Home</a>
+            <a href="page2.html" class="nav-item">Netflix</a>
+            <a href="reviews.html" class="nav-item">Reviews</a>
+            <a href="buy.html" class="nav-item">Buy</a>
+            <a href="about.html" class="nav-item">About</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <div class="card-box" id="main-panel">
+            
+            <div id="redeem-form">
+                <h1>Redeem your gift</h1>
+                <p style="color:#aaa; margin-bottom:20px;">Enter the code you found on Telegram.</p>
+                <input type="text" id="codeInput" placeholder="Enter Code (e.g. NETFLIX2025)">
+                <button onclick="tryRedeem()">REDEEM CODE</button>
+                <a href="index.html" style="display:block; text-align:center; margin-top:15px; color:#aaa; text-decoration:none;">Cancel</a>
+            </div>
+
+            <div id="winner-box">
+                <h2 style="color:var(--accent-green);">🎉 CODE ACCEPTED! 🎉</h2>
+                <p>You have won a premium account!</p>
+                
+                <div class="prize-details">
+                    <div class="prize-item">EMAIL:</div>
+                    <div class="prize-val" id="showEmail">...</div>
+                    <hr style="border-color:#333; margin:10px 0;">
+                    <div class="prize-item">PASSWORD:</div>
+                    <div class="prize-val" id="showPass">...</div>
+                    <hr style="border-color:#333; margin:10px 0;">
+                    <div class="prize-item">COUNTRY:</div>
+                    <div class="prize-val" id="showCountry">...</div>
+                </div>
+
+                <div style="background: rgba(255, 71, 87, 0.1); color: #ff4757; padding: 10px; font-size: 0.8rem; margin-bottom: 20px; border-radius: 5px;">
+                    ⚠ IMPORTANT: Save these details now. This code has been deleted and cannot be used again.
+                </div>
+                
+                <hr style="margin:20px 0; border-color:#333;">
+                
+                <h3>Submit Proof (Required)</h3>
+                <input type="text" id="reviewName" placeholder="Your Name / Telegram Username">
+                <textarea id="reviewText" placeholder="Write a short review..." rows="2"></textarea>
+                <label style="display:block; text-align:left; color:#aaa; margin-bottom:5px;">Upload Screenshot:</label>
+                <input type="file" id="proofFile" accept="image/*">
+                <button onclick="submitProof()">SUBMIT PROOF</button>
+            </div>
+
+        </div>
+
+        <div class="visual">
+            <img src="shape.png.png" class="torus-img" alt="3D Shape">
+        </div>
+    </div>
+
+    <script>
+        function tryRedeem() {
+            // 1. SECURITY: Check if user already won
+            if (localStorage.getItem('nathanHasRedeemed') === 'true') {
+                window.location.href = "limit_reached.html";
+                return;
+            }
+
+            const input = document.getElementById('codeInput').value.trim();
+            const codesDB = JSON.parse(localStorage.getItem('nathanCodes') || "{}");
+
+            // 2. CHECK CODE
+            if (codesDB.hasOwnProperty(input)) {
+                const prize = codesDB[input];
+                
+                // Show Prize
+                document.getElementById('redeem-form').style.display = 'none';
+                document.getElementById('winner-box').style.display = 'block';
+                
+                document.getElementById('showEmail').innerText = prize.email;
+                document.getElementById('showPass').innerText = prize.pass;
+                document.getElementById('showCountry').innerText = prize.country;
+                
+                // 3. DELETE CODE & LOCK USER
+                delete codesDB[input]; 
+                localStorage.setItem('nathanCodes', JSON.stringify(codesDB)); 
+                localStorage.setItem('nathanHasRedeemed', 'true'); 
+
+            } else {
+                // 4. INVALID CODE REDIRECT
+                window.location.href = "error_code.html";
+            }
+        }
+
+        function submitProof() {
+            const name = document.getElementById('reviewName').value;
+            const text = document.getElementById('reviewText').value;
+            const fileInput = document.getElementById('proofFile');
+
+            if(!name || !text || fileInput.files.length === 0) {
+                return alert("Please fill in all proof details to continue!");
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(fileInput.files[0]);
+            
+            reader.onload = function () {
+                const newReview = {
+                    user: name, text: text, image: reader.result, date: new Date().toLocaleDateString()
+                };
+                let reviews = JSON.parse(localStorage.getItem('nathanReviews') || "[]");
+                reviews.unshift(newReview);
+                localStorage.setItem('nathanReviews', JSON.stringify(reviews));
+
+                window.location.href = "thankyou.html";
+            };
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nathan Netflix | Services</title>
+    <style>
+        /* --- CSS VARIABLES --- */
+        :root {
+            --bg-dark: #0a0a0a;
+            --text-white: #ffffff;
+            --text-muted: #a0a0a0;
+            --accent-green: #55efc4; /* Neon Mint Green */
+            --accent-dark-green: #00b894;
+            --font-main: 'Inter', -apple-system, sans-serif;
+            --font-serif: 'Playfair Display', serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-dark);
+            color: var(--text-white);
+            height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- NAVIGATION --- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 5%;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .logo { font-weight: 800; letter-spacing: 1px; font-size: 1.1rem; text-transform: uppercase; color: white; text-decoration: none;}
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        
+        .nav-item {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-item:hover { color: var(--accent-green); }
+        .nav-item.active { color: var(--accent-green); font-weight: 700; }
+
+        /* --- MAIN LAYOUT --- */
+        .container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr; /* Left Text | Right Cards */
+            align-items: start;
+            padding: 0 5%;
+            max-width: 1300px;
+            margin: 0 auto;
+            width: 100%;
+            margin-top: 120px; /* Space for nav */
+            gap: 4rem;
+        }
+
+        /* LEFT SIDE */
+        .services-left {
+            animation: slideUp 0.8s ease-out;
+        }
+
+        .script-sub {
+            font-family: var(--font-serif);
+            font-style: italic;
+            font-size: 2rem;
+            color: var(--accent-green);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            line-height: 0.95;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: var(--text-white);
+            margin-bottom: 2.5rem;
+        }
+
+        .desc {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: var(--text-muted);
+            max-width: 450px;
+            margin-bottom: 2rem;
+        }
+
+        .presenter { color: var(--accent-green); margin-bottom: 2rem; }
+
+        /* Dot Decoration */
+        .dots {
+            display: inline-grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 1rem;
+        }
+        .dot { width: 6px; height: 6px; background: var(--accent-dark-green); border-radius: 50%; }
+
+        /* RIGHT SIDE: CARDS */
+        .services-right {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .service-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            border: 1px solid var(--accent-green);
+            text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            
+            /* Animation Entrance */
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideIn 0.6s ease-out forwards;
+        }
+
+        /* Stagger the animation */
+        .service-card:nth-child(1) { animation-delay: 0.2s; }
+        .service-card:nth-child(2) { animation-delay: 0.3s; }
+        .service-card:nth-child(3) { animation-delay: 0.4s; }
+        .service-card:nth-child(4) { animation-delay: 0.5s; }
+
+        .card-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            transition: color 0.3s;
+        }
+
+        .card-arrow {
+            font-size: 1.2rem;
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        /* Hover Effects */
+        .service-card:hover {
+            background: var(--accent-green);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(85, 239, 196, 0.15);
+        }
+
+        .service-card:hover .card-title,
+        .service-card:hover .card-arrow {
+            color: var(--bg-dark); /* Text turns black */
+        }
+
+        .service-card:hover .card-arrow {
+            transform: translateX(10px);
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; margin-top: 100px; gap: 2rem; height: auto; padding-bottom: 50px; }
+            h1 { font-size: 3rem; }
+            .dots { display: none; }
+            .service-card { padding: 1.5rem; }
+            .card-title { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+    <a href="index.html" class="logo">NATHAN NETFLIX</a>
+    <div class="nav-links">
+        <a href="index.html" class="nav-item">Home</a>
+        <a href="page2.html" class="nav-item">Netflix</a>
+        <a href="reviews.html" class="nav-item">Reviews</a> <a href="buy.html" class="nav-item">Buy</a>
+        <a href="about.html" class="nav-item">About</a>
+    </div>
+</nav>
+
+    <div class="container">
+        
+        <div class="services-left">
+            <span class="script-sub">Everything is Free</span>
+            <h1>Dive into<br>our services</h1>
+            
+            <p class="desc">
+                Welcome to our biggest Netflix giveaway platform. 
+                Explore features, redeem codes, and join our community.
+            </p>
+
+            <div class="presenter">
+                Presented By: <strong>@Nathan_ou</strong>
+            </div>
+
+            <div class="dots">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+        </div>
+
+        <div class="services-right">
+            <a href="page3.html" class="service-card js-scroll animate-in delay-1">
+    <span class="card-title">Redeem Code</span>
+    <span class="card-arrow">Access Now →</span>
+</a>
+            
+            <a href="page4.html" class="service-card">
+                <span class="card-title">Open Giveaway</span>
+                <span class="card-arrow">Enter →</span>
+            </a>
+            
+            <a href="https://t.me/Nathan_GenratorBot?start=1890681503" target="_blank" class="service-card">
+                <span class="card-title">Telegram Bot</span>
+                <span class="card-arrow">Start Bot →</span>
+            </a>
+
+            <a href="https://t.me/eagle_netflix" target="_blank" class="service-card">
+                <span class="card-title">Join Channel</span>
+                <span class="card-arrow">Telegram →</span>
+            </a>
+        </div>
+
+    </div>
+
+</body>
+</html>
