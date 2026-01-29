@@ -84,8 +84,8 @@
         </div>
     </div>
 
-    <script>
-        // --- YOUR FIREBASE CONFIG (Already Filled In) ---
+   <script>
+        // --- YOUR FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyBigUq4ey0AKnP23ZSf60An7MrbtzROnbU",
             authDomain: "nathan-3b7db.firebaseapp.com",
@@ -94,13 +94,12 @@
             messagingSenderId: "945645228940",
             appId: "1:945645228940:web:6decc5f01e8ca2e718bca9"
         };
-        // ---------------------------------------
+        // ----------------------------
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         function tryRedeem() {
-            // 1. SECURITY: Check local lock (Skip if Admin)
             const isAdmin = localStorage.getItem('nathanIsAdmin') === 'true';
             if (!isAdmin && localStorage.getItem('nathanHasRedeemed') === 'true') {
                 window.location.href = "limit_reached.html";
@@ -110,32 +109,25 @@
             const input = document.getElementById('codeInput').value.trim();
             if(!input) return alert("Enter a code!");
 
-            // 2. CHECK FIREBASE CLOUD
             const codeRef = db.collection("codes").doc(input);
 
             codeRef.get().then((doc) => {
                 if (doc.exists && doc.data().active === true) {
                     const prize = doc.data();
-
-                    // Show Prize
                     document.getElementById('redeem-form').style.display = 'none';
                     document.getElementById('winner-box').style.display = 'block';
                     document.getElementById('showEmail').innerText = prize.email;
                     document.getElementById('showPass').innerText = prize.pass;
                     document.getElementById('showCountry').innerText = prize.country;
-
-                    // 3. DELETE FROM CLOUD & LOCK USER
-                    codeRef.delete(); 
                     
-                    if (!isAdmin) {
-                        localStorage.setItem('nathanHasRedeemed', 'true');
-                    }
+                    codeRef.delete(); 
+                    if (!isAdmin) localStorage.setItem('nathanHasRedeemed', 'true');
                 } else {
                     window.location.href = "error_code.html";
                 }
             }).catch((error) => {
-                console.error("Error getting document:", error);
-                alert("Connection Error. Please try again.");
+                console.error("Error:", error);
+                alert("Connection Error. Please check your internet.");
             });
         }
 
@@ -143,22 +135,53 @@
             const name = document.getElementById('reviewName').value;
             const text = document.getElementById('reviewText').value;
             const fileInput = document.getElementById('proofFile');
+            const btn = document.querySelector("button[onclick='submitProof()']");
 
             if(!name || !text || fileInput.files.length === 0) return alert("Please fill all details!");
 
+            // 1. Show Loading
+            btn.innerText = "UPLOADING... ⏳";
+            btn.disabled = true;
+
+            const file = fileInput.files[0];
             const reader = new FileReader();
-            reader.readAsDataURL(fileInput.files[0]);
+            reader.readAsDataURL(file);
             
-            reader.onload = function () {
-                // Upload Review to Firebase Cloud
-                db.collection("reviews").add({
-                    user: name,
-                    text: text,
-                    image: reader.result, 
-                    date: new Date().toISOString()
-                }).then(() => {
-                    window.location.href = "thankyou.html";
-                });
+            reader.onload = function (event) {
+                const img = new Image();
+                img.src = event.target.result;
+                
+                img.onload = function() {
+                    // 2. COMPRESS IMAGE (To fix the 1MB limit)
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Resize to max 800px width (keeps it small)
+                    const maxWidth = 800;
+                    const scaleSize = maxWidth / img.width;
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * scaleSize;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Convert to smaller JPEG
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+
+                    // 3. UPLOAD TO FIREBASE
+                    db.collection("reviews").add({
+                        user: name,
+                        text: text,
+                        image: compressedDataUrl, 
+                        date: new Date().toISOString()
+                    }).then(() => {
+                        window.location.href = "thankyou.html";
+                    }).catch((error) => {
+                        console.error("Upload failed:", error);
+                        alert("Error: " + error.message);
+                        btn.innerText = "SUBMIT PROOF";
+                        btn.disabled = false;
+                    });
+                };
             };
         }
     </script>
