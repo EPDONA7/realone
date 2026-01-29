@@ -4,31 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nathan Netflix | Proofs</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
     <style>
         :root { --bg-dark: #0a0a0a; --bg-card: #141414; --accent-green: #55efc4; --text-white: #fff; --font-main: 'Inter', sans-serif; }
         body { font-family: var(--font-main); background: var(--bg-dark); color: var(--text-white); padding-top: 80px; }
-        
-        /* NAV (COPIED FROM OTHERS) */
         nav { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 1.5rem 5%; background: rgba(10,10,10,0.9); backdrop-filter: blur(10px); z-index: 1000; }
         .logo { font-weight: 800; color: #fff; text-decoration: none; text-transform: uppercase; }
         .nav-links a { color: #aaa; text-decoration: none; margin-left: 20px; }
         .nav-links a:hover { color: var(--accent-green); }
-
-        /* REVIEWS GRID */
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         h1 { text-align: center; margin-bottom: 3rem; color: var(--accent-green); text-transform: uppercase; font-size: 2.5rem; }
-        
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
-        
-        .review-card {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 15px;
-            overflow: hidden;
-            transition: transform 0.3s;
-        }
+        .review-card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; overflow: hidden; transition: transform 0.3s; }
         .review-card:hover { transform: translateY(-5px); border-color: var(--accent-green); }
-        
         .proof-img { width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid #333; }
         .card-body { padding: 1.5rem; }
         .user-name { font-weight: bold; color: var(--accent-green); margin-bottom: 5px; display: block; }
@@ -39,40 +29,64 @@
 <body>
 
     <nav>
-    <a href="index.html" class="logo">NATHAN NETFLIX</a>
-    <div class="nav-links">
-        <a href="index.html" class="nav-item">Home</a>
-        <a href="page2.html" class="nav-item">Netflix</a>
-        <a href="reviews.html" class="nav-item">Reviews</a> <a href="buy.html" class="nav-item">Buy</a>
-        <a href="about.html" class="nav-item">About</a>
-    </div>
-</nav>
+        <a href="index.html" class="logo">NATHAN NETFLIX</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="page2.html">Netflix</a>
+            <a href="reviews.html" style="color:var(--accent-green);">Reviews</a>
+            <a href="buy.html">Buy</a>
+            <a href="about.html">About</a>
+        </div>
+    </nav>
+
     <div class="container">
         <h1>Winner's Wall 🏆</h1>
         <div id="reviewGrid" class="grid">
-            </div>
+            <p style="text-align:center; width:100%; grid-column:1/-1;">Loading proofs from cloud...</p>
+        </div>
     </div>
 
     <script>
-        const reviewsDB = JSON.parse(localStorage.getItem('nathanReviews') || "[]");
+        // --- YOUR FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBigUq4ey0AKnP23ZSf60An7MrbtzROnbU",
+            authDomain: "nathan-3b7db.firebaseapp.com",
+            projectId: "nathan-3b7db",
+            storageBucket: "nathan-3b7db.firebasestorage.app",
+            messagingSenderId: "945645228940",
+            appId: "1:945645228940:web:6decc5f01e8ca2e718bca9"
+        };
+        // ----------------------------
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
         const grid = document.getElementById('reviewGrid');
 
-        if(reviewsDB.length === 0) {
-            grid.innerHTML = `<p style="text-align:center; grid-column: 1/-1;">No winners yet. Be the first!</p>`;
-        } else {
-            reviewsDB.forEach(rev => {
-                grid.innerHTML += `
-                    <div class="review-card">
-                        <img src="${rev.image}" class="proof-img">
-                        <div class="card-body">
-                            <span class="user-name">@${rev.user}</span>
-                            <p class="review-text">"${rev.text}"</p>
-                            <span class="date">${rev.date}</span>
+        // Listen for Reviews from Cloud
+        db.collection("reviews").orderBy("date", "desc").limit(20).onSnapshot((snapshot) => {
+            if(snapshot.empty) {
+                grid.innerHTML = `<p style="text-align:center; grid-column: 1/-1;">No winners yet. Be the first!</p>`;
+            } else {
+                grid.innerHTML = ''; // Clear loading text
+                snapshot.forEach(doc => {
+                    const rev = doc.data();
+                    // Format Date nicely
+                    const dateObj = new Date(rev.date);
+                    const dateStr = dateObj.toLocaleDateString();
+
+                    grid.innerHTML += `
+                        <div class="review-card">
+                            <img src="${rev.image}" class="proof-img">
+                            <div class="card-body">
+                                <span class="user-name">@${rev.user}</span>
+                                <p class="review-text">"${rev.text}"</p>
+                                <span class="date">${dateStr}</span>
+                            </div>
                         </div>
-                    </div>
-                `;
-            });
-        }
+                    `;
+                });
+            }
+        });
     </script>
 </body>
 </html>
