@@ -129,8 +129,18 @@
         }
 
         function startGiveaway() {
-            const limit = parseInt(document.getElementById('gaLimit').value);
-            db.collection("settings").doc("giveaway").set({ active: true, limit: limit }, { merge: true });
+            const limitInput = document.getElementById('gaLimit').value;
+            const limit = parseInt(limitInput);
+            
+            // Force 'active' to be a BOOLEAN true
+            db.collection("settings").doc("giveaway").set({ 
+                active: true, 
+                limit: limit,
+                // Ensure 'claimed' exists, default to 0 if missing
+                claimed: firebase.firestore.FieldValue.increment(0) 
+            }, { merge: true }).then(() => {
+                alert("Giveaway Started! Check Page 4.");
+            }).catch((e) => alert("Error: " + e.message));
         }
 
         function stopGiveaway() {
@@ -230,4 +240,5 @@
         }
     </script>
 </body>
+
 </html>
