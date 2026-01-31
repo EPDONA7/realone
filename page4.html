@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nathan Netflix | Giveaway</title>
+    
+    <link rel="manifest" href="manifest.json">
+
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
@@ -14,20 +17,29 @@
         .logo { font-weight: 800; letter-spacing: 1px; font-size: 1.1rem; text-transform: uppercase; color: white; text-decoration: none; }
         .nav-links a { color: #aaa; text-decoration: none; margin-left: 20px; }
         .nav-links a:hover { color: var(--accent-green); }
+        
         .giveaway-section { flex: 1; display: flex; justify-content: center; align-items: center; padding: 120px 20px 50px 20px; }
         .modal-card { background: var(--bg-card); border: 1px solid var(--accent-green); border-radius: 20px; padding: 3rem; max-width: 650px; width: 100%; text-align: center; box-shadow: 0 0 50px rgba(85, 239, 196, 0.15); position: relative; }
+        
+        /* MODES */
         #wait-mode { display: block; }
         #live-mode { display: none; }
         #winner-mode { display: none; text-align: left; }
+
         .warning-icon { font-size: 3rem; margin-bottom: 1rem; display: block; animation: bounce 2s infinite; }
         .warning-text { font-size: 1.5rem; font-weight: 700; color: var(--accent-green); margin-bottom: 1rem; line-height: 1.4; }
         .live-counter { background: rgba(85, 239, 196, 0.1); border: 1px solid var(--accent-green); color: var(--accent-green); padding: 10px 20px; border-radius: 50px; font-weight: bold; font-size: 1.2rem; display: inline-block; margin-bottom: 20px; }
+        
         .check-btn { display: inline-block; width: 100%; max-width: 300px; padding: 18px; background: linear-gradient(90deg, var(--accent-green), var(--accent-dark-green)); color: #0a0a0a; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 10px 20px rgba(85, 239, 196, 0.3); transition: all 0.3s ease; margin-bottom: 2rem; }
         .check-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 30px rgba(85, 239, 196, 0.5); }
         .check-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; transform: none; }
+        
+        /* Winner & Proof Styles */
         .prize-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
         .prize-label { color: var(--accent-green); font-weight: bold; }
         .prize-val { font-family: monospace; font-size: 1.1rem; color: #fff; }
+        input, textarea { width: 100%; padding: 15px; margin-bottom: 1rem; background: rgba(255,255,255,0.05); border: 1px solid #333; color: #fff; border-radius: 8px; margin-top: 10px; }
+        
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     </style>
 </head>
@@ -64,27 +76,45 @@
 
             <div id="winner-mode">
                 <h2 style="text-align:center; color:var(--accent-green); margin-bottom:20px;">🎉 ACCOUNT CLAIMED!</h2>
+                
                 <div class="prize-row"><span class="prize-label">Email:</span><span class="prize-val" id="winEmail">...</span></div>
                 <div class="prize-row"><span class="prize-label">Password:</span><span class="prize-val" id="winPass">...</span></div>
                 <div class="prize-row"><span class="prize-label">Country:</span><span class="prize-val" id="winCountry">...</span></div>
-                <div style="margin-top:20px; font-size:0.9rem; color:#ff4757; text-align:center;">⚠ Screenshot this now! It will disappear if you refresh.</div>
-                <a href="index.html" class="check-btn" style="text-align:center; display:block; margin-top:20px; text-decoration:none;">Go Home</a>
+                
+                <div style="margin-top:20px; margin-bottom:20px; font-size:0.8rem; color:#ff4757; text-align:center; background: rgba(255, 71, 87, 0.1); padding: 10px; border-radius: 5px;">
+                    ⚠ Save these details now! They will disappear.
+                </div>
+
+                <hr style="border-color:#333; margin-bottom:20px;">
+
+                <h3 style="text-align:left;">Submit Proof (Required)</h3>
+                <input type="text" id="reviewName" placeholder="Your Name / Telegram Username">
+                <textarea id="reviewText" placeholder="Write a short review..." rows="2"></textarea>
+                <label style="display:block; text-align:left; color:#aaa; margin-bottom:5px;">Upload Screenshot:</label>
+                <input type="file" id="proofFile" accept="image/*">
+                
+                <button class="check-btn" onclick="submitProof()">SUBMIT PROOF</button>
             </div>
 
         </div>
     </div>
 
     <script>
-        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        // --- YOUR FIREBASE KEYS (Added from screenshot) ---
         const firebaseConfig = {
-             // PASTE THE KEYS FROM ADMIN.HTML HERE
+            apiKey: "AIzaSyBigUq4ey0AKnP23ZSf60An7MrbtzROnbU",
+            authDomain: "nathan-3b7db.firebaseapp.com",
+            projectId: "nathan-3b7db",
+            storageBucket: "nathan-3b7db.firebasestorage.app",
+            messagingSenderId: "945645228940",
+            appId: "1:945645228940:web:6decc5f01e8ca2e718bca9"
         };
         // ---------------------------------------
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Listen for live updates
+        // 1. LISTEN TO GIVEAWAY STATUS
         db.collection("settings").doc("giveaway").onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
@@ -96,7 +126,8 @@
                 document.getElementById('counterDisplay').innerText = text;
                 document.getElementById('wait-display').innerText = text;
 
-                if (data.active) {
+                // CHECK ACTIVE STATUS
+                if (data.active === true) {
                     document.getElementById('wait-mode').style.display = 'none';
                     document.getElementById('live-mode').style.display = 'block';
 
@@ -113,9 +144,12 @@
                     document.getElementById('wait-mode').style.display = 'block';
                     document.getElementById('live-mode').style.display = 'none';
                 }
+            } else {
+                console.log("Waiting for Admin to initialize...");
             }
         });
 
+        // 2. CLAIM ACCOUNT LOGIC
         function claimAccount() {
             const isAdmin = localStorage.getItem('nathanIsAdmin') === 'true';
             if (!isAdmin && localStorage.getItem('nathanHasRedeemed') === 'true') {
@@ -123,7 +157,7 @@
                 return;
             }
 
-            // Find an unused code in the cloud
+            // Find unused code
             db.collection("codes").where("active", "==", true).limit(1).get().then((querySnapshot) => {
                 if (querySnapshot.empty) {
                     return alert("Sorry! All accounts claimed or stock empty.");
@@ -135,9 +169,8 @@
                 // Delete from cloud (Claim it)
                 doc.ref.delete();
 
-                // Update Counter in Cloud
-                const settingsRef = db.collection("settings").doc("giveaway");
-                settingsRef.update({
+                // Increment Counter
+                db.collection("settings").doc("giveaway").update({
                     claimed: firebase.firestore.FieldValue.increment(1)
                 });
 
@@ -145,15 +178,66 @@
                     localStorage.setItem('nathanHasRedeemed', 'true');
                 }
 
+                // Show Winner Mode
                 document.getElementById('live-mode').style.display = 'none';
                 document.getElementById('winner-mode').style.display = 'block';
                 document.getElementById('winEmail').innerText = account.email;
                 document.getElementById('winPass').innerText = account.pass;
                 document.getElementById('winCountry').innerText = account.country;
+
             }).catch((error) => {
                 console.error("Error:", error);
                 alert("Too many people clicking! Try again.");
             });
+        }
+
+        // 3. SUBMIT PROOF LOGIC (With Compression)
+        function submitProof() {
+            const name = document.getElementById('reviewName').value;
+            const text = document.getElementById('reviewText').value;
+            const fileInput = document.getElementById('proofFile');
+            const btn = document.querySelector("button[onclick='submitProof()']");
+
+            if(!name || !text || fileInput.files.length === 0) return alert("Please fill all details!");
+
+            btn.innerText = "UPLOADING... ⏳";
+            btn.disabled = true;
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            
+            reader.onload = function (event) {
+                const img = new Image();
+                img.src = event.target.result;
+                
+                img.onload = function() {
+                    // Compress Image
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxWidth = 800;
+                    const scaleSize = maxWidth / img.width;
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * scaleSize;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+
+                    // Upload
+                    db.collection("reviews").add({
+                        user: name,
+                        text: text,
+                        image: compressedDataUrl, 
+                        date: new Date().toISOString()
+                    }).then(() => {
+                        window.location.href = "thankyou.html";
+                    }).catch((error) => {
+                        alert("Error: " + error.message);
+                        btn.innerText = "SUBMIT PROOF";
+                        btn.disabled = false;
+                    });
+                };
+            };
         }
     </script>
 </body>
